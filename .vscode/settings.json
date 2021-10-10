@@ -1,0 +1,10 @@
+{
+    "files.associations": {
+        "chrono": "cpp",
+        "xlocale": "cpp",
+        "ostream": "cpp",
+        "streambuf": "cpp",
+        "xutility": "cpp",
+        "xstddef": "cpp"
+    }
+}
