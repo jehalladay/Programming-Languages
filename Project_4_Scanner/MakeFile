@@ -1,0 +1,95 @@
+# Project 4: Scanner 
+# Programming Language
+# James Halladay
+# Date: 10/21/2021
+# 
+# Description: This file will compile the program and 
+# 			   serves as a test logger for the program.
+# 
+
+
+CC = g++
+CFLAGS  = -g -Wall
+RM = rm -f
+LOG = ./logs/test.log
+TESTHISTORY = ./logs/testHistory.log
+MAINHISTORY = ./logs/mainHistory.log
+HISTORY = ./logs/history.log
+
+
+
+default: main
+
+startmain:
+	@echo "" > ${LOG}
+	@${RM} main
+	@echo "\nStarting Main: `date`" >> ${LOG}
+
+
+runflag: 
+	@touch runflag
+
+utility.o: utility.cpp utility.h
+	@echo "Compiling utility.cpp"
+	@echo "\tCompiling utility.cpp: `date`" >> ${LOG}
+	-@$(CC) $(CFLAGS) -c utility.cpp -o ./objects/utility.o >> ${LOG} 2>&1
+
+scanner.o: scanner.cpp scanner.h
+	@echo "Compiling scanner.cpp"
+	@echo "\tCompiling scanner.cpp: `date`" >> ${LOG}
+	-@$(CC) $(CFLAGS) -c scanner.cpp -o ./objects/scanner.o >> ${LOG} 2>&1
+
+
+main.o: main.cpp
+	@echo "Compiling main.cpp"
+	@echo "\tCompiling main.cpp: `date`" >> ${LOG}
+	-@$(CC) $(CFLAGS) -c main.cpp -o ./objects/main.o >> ${LOG} 2>&1
+
+
+main.c: scanner.o main.o utility.o
+	@echo "Linking..."
+	@echo "\tLinking main: `date`" >> ${LOG}
+	-@$(CC) $(CFLAGS) ./objects/main.o ./objects/scanner.o ./objects/utility.o -o main >> ${LOG} 2>&1
+	@echo "Built main"
+	@echo "\tBuilt main: `date`" >> ${LOG}
+
+
+main: startmain runflag main.c
+	@rm runflag
+	@echo "\nRunning Main: `date`\n" >> ${LOG}
+	-@./main >> ${LOG} 2>&1
+	@echo "\nFinished Main: `date` \n\n" >> ${LOG} 2>&1
+
+	@cat ${LOG} >> ${MAINHISTORY}
+	@cat ${LOG} >> ${HISTORY}
+
+
+clean: runflag
+	@echo "" > ${LOG}
+	@echo "\nCleaning up..."
+	@echo "\nCleaning up: `date`\n" >> ${LOG}
+
+	@$(RM) ./objects/*.o
+	@$(RM) ./runflag
+	@$(RM) ./assign3
+	@$(RM) ./test
+
+	@echo "Finished Cleaning\n"
+	@echo "Finished Cleaning: `date`\n\n" >> ${LOG}
+
+	@cat ${LOG} >> ${HISTORY}
+
+
+clean_all: runflag
+	@echo "\nCleaning up..."
+
+	@$(RM) ./assign3
+	@$(RM) ./test
+	@$(RM) ./runflag
+	@$(RM) ./objects/*.o
+	@echo "" > ${LOG}
+	@echo "" > ${TESTHISTORY}
+	@echo "" > ${MAINHISTORY}
+	@echo "" > ${HISTORY}
+
+	@echo "Finished Cleaning\n"

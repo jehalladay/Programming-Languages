@@ -5,6 +5,13 @@
         "ostream": "cpp",
         "streambuf": "cpp",
         "xutility": "cpp",
-        "xstddef": "cpp"
+        "xstddef": "cpp",
+        "iostream": "cpp",
+        "fstream": "cpp",
+        "xmemory": "cpp",
+        "xstring": "cpp",
+        "iosfwd": "cpp",
+        "string": "cpp",
+        "xiosbase": "cpp"
     }
 }
