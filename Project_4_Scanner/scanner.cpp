@@ -155,24 +155,36 @@ void Scanner::scan() {
             }
         }
 
+        // Now that we know the tokens are valid, add them to the master token vector
         tokens.insert(tokens.end(), string_tokens.begin(), string_tokens.end());
     }
 
     _tokens = tokens;    
 }
 
-
+/*
+    Method prints out all tokens along with their values separated by new lines
+*/
 void Scanner::printTokens() {
     for (int i = 0; i < (int)_tokens.size(); i++) {
         cout << _tokens[i].toString() << endl;
     }
 }
 
-
+/*
+    Getter for the token vector
+*/
 vector<Token> Scanner::getTokens() {
     return _tokens;
 }
 
+
+/*
+    Method checks a string to see if it is a reserved word
+
+    input: string word
+    output: TokenType
+*/
 TokenType Scanner::check_reserved(string input) {
     TokenType out;
     string value = input;
@@ -193,6 +205,15 @@ TokenType Scanner::check_reserved(string input) {
     return out;
 }
 
+
+/*
+    Method to scan a single line of code
+
+    Handles the internal recursive descent tokenization
+
+    input: string line
+    output: vector<Token>
+*/
 vector<Token> Scanner::scanLine(string input) {
     vector<Token> tokens;
     string line;
@@ -276,11 +297,11 @@ vector<Token> Scanner::tokenize(vector<Token> tokens) {
         that the string is really an Id, an Expr, or a Reserved word.
 
     Executes the rules of the CFG:
-        stmt -> ID := expr
+        stmt -> ID := expr ;
         stmt -> BEGIN
         stmt -> END
-        stmt -> READ ( ID, ID, ... )
-        stmt -> WRITE ( expr, expr, ... )
+        stmt -> READ ( ID, ID, ... ) ;
+        stmt -> WRITE ( expr, expr, ... ) ;
 
     input: Token stmt, vector<Token> out
     output: vector<Token>
@@ -398,7 +419,7 @@ vector<Token> Scanner::scanStmt(Token token, vector<Token> out) {
 
         /* 
             The only other kind of statement allowed is an assignment statement
-                Assignments are of the form:        Id := Expr
+                Assignments are of the form:        Id := Expr ;
                 We assume the Id is the first word in the line
                     it must be followed by :=
                 We assume the expression is everything else terminated by a semicolon
