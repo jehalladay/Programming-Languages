@@ -71,8 +71,7 @@ clean: runflag
 
 	@$(RM) ./objects/*.o
 	@$(RM) ./runflag
-	@$(RM) ./assign3
-	@$(RM) ./test
+	@$(RM) ./main
 
 	@echo "Finished Cleaning\n"
 	@echo "Finished Cleaning: `date`\n\n" >> ${LOG}
@@ -83,8 +82,7 @@ clean: runflag
 clean_all: runflag
 	@echo "\nCleaning up..."
 
-	@$(RM) ./assign3
-	@$(RM) ./test
+	@$(RM) ./main
 	@$(RM) ./runflag
 	@$(RM) ./objects/*.o
 	@echo "" > ${LOG}
