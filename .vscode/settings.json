@@ -12,6 +12,7 @@
         "xstring": "cpp",
         "iosfwd": "cpp",
         "string": "cpp",
-        "xiosbase": "cpp"
+        "xiosbase": "cpp",
+        "vector": "cpp"
     }
 }

@@ -2,26 +2,50 @@
 Project 4: Scanner
 James Halladay
 
-Here we are building a scanner class
-for a simple language
+Here we are building the implementation of a scanner class for a simple language
 
 Data types: integer
 Identifiers: [a-z|A-Z[a-z|A-Z|0-9]]
 Literals: [0-9]
+Variables: {stmt, expr, op}
+Terminal Symbols: {BeginSym, EndSym, ReadSym, WriteSym, Id,  IntLiteral, LParen, RParen, SemiColon, Comma, PlusOp, MinusOp, AssignOp}
 Comments: --
-Reserved Words: [begin, end, read, write]
+Reserved Words: [BEGIN, END, READ, WRITE]
 Terminaling character: ;
 Statement types:
-    Assignment
-    Id := Expression
+    stmt -> ID := expr ;
+    stmt -> BEGIN
+    stmt -> END
+    stmt -> READ ( Id, Id, ... ) ;
+    stmt -> WRITE ( expr, expr, ... ) ;
+
+Expression types:
+    expr -> expr OP expr
+    expr -> ( expr )
+    expr -> Id
+    expr -> IntLiteral
+
+Operator types:
+    op -> +
+    op -> -
+
+Errors are given as a token type but are caught by the scanner
+    When caught, the line they were caught on is reported. This is a feature that allows easy 
+    debugging. This feature also made it easier to debug the scanner itself when coding it.
+
+Recursive Descent is implemented in the scanner. 
+    Each line is tokenized as a statement. 
+    Each statement is tokenized into terminal symbols and expresssions.
+    Each expression is tokenized into terminal symbols, expressions, and operators. 
+
+    once the line is composed completely of tokens with terminal symbols, 
+    the next line is tokenized.
 */
 
 #include <iostream>
 #include <string>
 #include <chrono> 
-#include <cctype>
 #include <vector>
-#include <algorithm>
 #include <sstream>
 #include <fstream>
 
@@ -205,6 +229,26 @@ TokenType Scanner::check_reserved(string input) {
     return out;
 }
 
+bool Scanner::is_Id(string input) {
+    bool out = true;
+    string value = input;
+    value = strip(value);
+    
+    if(value.length() == 0) {
+        out = false;
+    } else if(!isalpha(value[0])) {
+        out = false;
+    }
+
+    for(int i = 1; i < (int)value.length(); i++) {
+        if(!isalpha(value[i]) && !isdigit(value[i]) && value[i] != '_') {
+            out = false;
+        }
+    }
+
+    return out;
+}
+
 
 /*
     Method to scan a single line of code
@@ -256,8 +300,8 @@ vector<Token> Scanner::tokenize(vector<Token> tokens) {
                 descend = true;
                 break;
             case Expr:
-                // out = scanExpr(tokens[i], out);
-                out.push_back(Token(Id, "Unprocessed Expression: " + token));
+                out = scanExpr(tokens[i], out);
+                // out.push_back(Token(Id, "Unprocessed Expression: " + token));
                 descend = true;
                 break;
             case OP:
@@ -392,7 +436,7 @@ vector<Token> Scanner::scanStmt(Token token, vector<Token> out) {
                 carry = word.substr(5);
 
             }else {
-                cout << "found Id: " << word << endl;
+                // cout << "found Id: " << word << endl;
                 Assignment_flag = true;
             }
         } else if(check_reserved(word.substr(0, 5)) == WriteSym) {
@@ -408,12 +452,12 @@ vector<Token> Scanner::scanStmt(Token token, vector<Token> out) {
                 carry = word.substr(6);
 
             } else if(isdigit(word[5]) || isalpha(word[5]) || word[5] == '_') {
-                cout << "found Id: " << word << endl;
+                // cout << "found Id: " << word << endl;
                 Assignment_flag = true;
             }
         } else if(type == NOT_RESERVED) {
-            cout << "not reserved found" << word << endl;
-                Assignment_flag = true;
+            // cout << "not reserved found" << word << endl;
+            Assignment_flag = true;
         }
 
 
@@ -544,14 +588,180 @@ vector<Token> Scanner::scanStmt(Token token, vector<Token> out) {
         }
     }
 
-
-    
-
-    // out.push_back(token);
     return out;
-    
-    
 }
+
+
+/*
+    Method tokenizes an Expression
+
+    Internal use only: called by tokenize
+
+    Takes the input statement token and executes the cfg production rules on it
+        The new tokens are added to the vector passed in the second parameter
+        That vector is then returned
+
+    Assumes words take the forms below, other code is written to verify 
+        that the string is really an Id, an Expr, or a Reserved word.
+
+    Executes the rules of the CFG:
+        expr -> expr OP expr
+        expr -> ( expr )
+        expr -> Id
+        expr -> IntLiteral
+
+
+    input: Token stmt, vector<Token> out
+    output: vector<Token>
+*/
+vector<Token> Scanner::scanExpr(Token token, vector<Token> out) {
+    string word = strip(token.getValue()), c ="";
+    vector<Token> paren_stack;
+    enum candidates {
+        Paren, Op, ID, INT, Er
+    } candidate;
+
+    // cout << "Scanning expression: " << word << endl;
+
+    candidate = Op;
+
+
+    // first we consider the case when the first char is a parenthesis
+    //  if word is not paren, we check if it is an int, else it is left as ID
+    if(word[0] == '(') {
+        candidate = Paren;
+        paren_stack.push_back(Token(LParen, "("));
+        // out.push_back(Token(LParen, "("));
+    } else if(isdigit(word[0])) {
+        candidate = INT;
+        if((int)word.length() == 1) {
+            out.push_back(Token(IntLiteral, word));
+        }
+    } else if(isalpha(word[0])) {
+        candidate = ID;
+        if((int)word.length() == 1) {
+            out.push_back(Token(Id, word));
+        }
+    } else {
+        out.push_back(Token(ERROR, word + "  1"));
+    }
+    c += word[0];
+
+    /*
+        we scan through the expression character by character to determine what cfg production rule to use
+        the expression is assumed to be one of the following forms. It is assumed to be the
+        form on the left if no operation is found at the end of the assumed expression
+            ( expr )   || expr OP expr
+            IntLiteral || expr OP expr
+            Id         || expr OP expr
+        
+        if the expression is found to be an expr OP expr, we immediately collect everything found up to that
+            point and assign it to an expr token then push an OP token. The candidate type is changed to OP
+            and everything else is collected and pushed as an expr token.
+    */
+    for(int i = 1; i < (int)word.length(); i++) {
+
+        // for parens, we collect the parens in a stack 
+        // if an operation is found after the last parenthesis, we change
+        // the candidate to Op
+        if(candidate == Paren) {
+            if(word[i] == '(') {
+                paren_stack.push_back(Token(LParen, "("));
+                c += word[i];
+            } else if(word[i] == ')') {
+                paren_stack.pop_back();
+                if(paren_stack.empty()) {
+                    if(i + 1 >= (int)word.length()) {
+                        out.push_back(Token(LParen, "("));
+                        out.push_back(Token(Expr, c.substr(1))); // may need to be just c // 
+                        out.push_back(Token(RParen, ")"));
+                        break;
+                    } else if (word[i + 1] == '+' || word[i + 1] == '-') {
+                        c += ')';
+                        out.push_back(Token(Expr, c));
+                        if(word[i+1] == '+') {
+                            out.push_back(Token(OP, "+"));
+                        } else {
+                            out.push_back(Token(OP, "-"));
+                        }
+                        i += 1;
+                        c = "";
+                        candidate = Op;
+                    } else {
+                        candidate = Er;
+                        out.push_back(Token(ERROR, word + "  2"));
+                    }
+                } else {
+                    c += word[i];
+                }
+            } else {
+                c += word[i];
+            }
+
+        // for integers, we just check if the word is composed of digits
+        // if the end of the digits is found and the word still continues, 
+        //  it must be an OP or an error    
+        } else if (candidate == INT) {
+            if(isdigit(word[i])) {
+                c += word[i];
+                if(i + 1 >= (int)word.length()) {
+                    out.push_back(Token(IntLiteral, c));
+                    break;
+                }
+            } else if(word[i] == '+' || word[i] == '-') {
+                out.push_back(Token(Expr, c));
+                if(word[i+1] == '+') {
+                    out.push_back(Token(OP, "+"));
+                } else {
+                    out.push_back(Token(OP, "-"));
+                }                
+                candidate = Op;
+                c = "";
+            } else {
+                candidate = Er;
+                out.push_back(Token(ERROR, word + "  3"));
+            }
+
+        // for Ids, we check if the word is composed of letters, numbers, or underscores
+        //  if end of Id is found and word continues past it, it is either an OP or an error
+        } else if (candidate == ID) {
+            if(isalpha(word[i]) || isdigit(word[i]) || word[i] == '_') {
+                c += word[i];
+                if(i + 1 >= (int)word.length()) {
+                    out.push_back(Token(Id, c));
+                    break;
+                }
+            } else if(word[i] == '+' || word[i] == '-') {
+                out.push_back(Token(Expr, c));
+                if(word[i] == '+') {
+                    out.push_back(Token(OP, "+"));
+                } else {
+                    out.push_back(Token(OP, "-"));
+                }
+                candidate = Op;
+                c = "";
+            } else {
+                candidate = Er;
+                out.push_back(Token(ERROR, word + "  4"));
+            }
+
+        // We know it is an operation now, so we just collect everything
+        //  following it into another expression
+        } else if (candidate == Op) {
+            c += word[i];
+            if(i + 1 >= (int)word.length()) {
+                out.push_back(Token(Expr, c));
+                break;
+            }
+        }
+        
+    }
+
+    return out;
+}
+
+
+
 
 
 void Scanner::check_reserved_test() {
